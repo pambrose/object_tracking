@@ -12,9 +12,8 @@ from contour_finder import ContourFinder
 from flask import Flask
 from flask import redirect
 from flask import request
-from werkzeug.wrappers import Response
-
 from location_server import LocationServer
+from werkzeug.wrappers import Response
 
 # I tried to include this in the constructor and make it depedent on self.__leds, but it does not work
 if is_raspi():
@@ -221,6 +220,9 @@ class GenericObjectTracker(object):
             sys.exit(1)
 
         self.location_server.write_location(-1, -1, 0, 0, 0)
+
+    def markup_image(self):
+        return self.display or self.serve_images
 
     @staticmethod
     def cli_args():

@@ -10,10 +10,9 @@ import imutils
 import opencv_defaults as defs
 from common_constants import LOGGING_ARGS
 from common_utils import is_raspi
+from generic_object_tracker import GenericObjectTracker
 from opencv_utils import BLUE, GREEN, RED
 from opencv_utils import get_list_arg, get_moment
-
-from generic_object_tracker import GenericObjectTracker
 
 
 class SingleObjectTracker(GenericObjectTracker):
@@ -73,7 +72,7 @@ class SingleObjectTracker(GenericObjectTracker):
                 if contours is not None and len(contours) == 1:
                     contour, area, img_x, img_y = get_moment(contours[0])
 
-                    if self.display or self.serve_images:
+                    if self.markup_image:
                         x, y, w, h = cv2.boundingRect(contour)
                         cv2.rectangle(image, (x, y), (x + w, y + h), BLUE, 2)
                         cv2.drawContours(image, [contour], -1, GREEN, 2)
@@ -96,7 +95,7 @@ class SingleObjectTracker(GenericObjectTracker):
                     self.location_server.write_location(img_x, img_y, img_width, img_height, middle_inc)
                     self._prev_x, self._prev_y = img_x, img_y
 
-                if self.display or self.serve_images:
+                if self.markup_image:
                     # Draw the alignment lines
                     cv2.line(image, (mid_x - middle_inc, 0), (mid_x - middle_inc, img_height), x_color, 1)
                     cv2.line(image, (mid_x + middle_inc, 0), (mid_x + middle_inc, img_height), x_color, 1)
@@ -105,9 +104,9 @@ class SingleObjectTracker(GenericObjectTracker):
 
                     cv2.putText(image, text, defs.TEXT_LOC, defs.TEXT_FONT, defs.TEXT_SIZE, RED, 1)
 
-                    self.display_image(image)
-
+                self.display_image(image)
                 self.serve_image(image)
+
                 self.cnt += 1
 
             except BaseException as e:

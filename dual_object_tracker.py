@@ -10,10 +10,9 @@ import imutils
 import opencv_defaults as defs
 from common_constants import LOGGING_ARGS
 from common_utils import is_raspi
-from opencv_utils import BLUE, GREEN, RED
-from opencv_utils import get_list_arg, get_moment
-
 from generic_object_tracker import GenericObjectTracker
+from opencv_utils import BLUE, GREEN, RED, YELLOW
+from opencv_utils import get_list_arg, get_moment
 
 
 class DualObjectTracker(GenericObjectTracker):
@@ -80,7 +79,7 @@ class DualObjectTracker(GenericObjectTracker):
                     avg_x = (abs(img_x1 - img_x2) / 2) + min(img_x1, img_x2)
                     avg_y = (abs(img_y1 - img_y2) / 2) + min(img_y1, img_y2)
 
-                    if self.display or self.serve_images:
+                    if self.markup_image:
                         x1, y1, w1, h1 = cv2.boundingRect(countour1)
                         cv2.rectangle(image, (x1, y1), (x1 + w1, y1 + h1), BLUE, 2)
                         cv2.drawContours(image, [countour1], -1, GREEN, 2)
@@ -115,7 +114,7 @@ class DualObjectTracker(GenericObjectTracker):
                     self._prev_x, self._prev_y = avg_x, avg_y
 
                 # Display images
-                if self.display or self.serve_images:
+                if self.markup_image:
                     # Draw the alignment lines
                     cv2.line(image, (mid_x - middle_inc, 0), (mid_x - middle_inc, img_height), x_color, 1)
                     cv2.line(image, (mid_x + middle_inc, 0), (mid_x + middle_inc, img_height), x_color, 1)
@@ -124,9 +123,9 @@ class DualObjectTracker(GenericObjectTracker):
 
                     cv2.putText(image, text, defs.TEXT_LOC, defs.TEXT_FONT, defs.TEXT_SIZE, RED, 1)
 
-                    self.display_image(image)
-
+                self.display_image(image)
                 self.serve_image(image)
+
                 self.cnt += 1
 
             except BaseException as e:

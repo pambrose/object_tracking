@@ -1,13 +1,19 @@
 import logging
 import sys
+from threading import Lock
+from threading import Thread
 
 import camera
 import common_cli_args  as cli
 import cv2
 import opencv_utils as utils
 from common_cli_args import setup_cli_args
+from common_utils import currentTimeMillis
 from common_utils import is_raspi
 from contour_finder import ContourFinder
+from flask import Flask
+from werkzeug.wrappers import Response
+
 from location_server import LocationServer
 
 # I tried to include this in the constructor and make it depedent on self.__leds, but it does not work
@@ -26,7 +32,8 @@ class GenericObjectTracker(object):
                  display=False,
                  flip=False,
                  usb_camera=False,
-                 leds=False):
+                 leds=False,
+                 serve_images=False):
         self.__width = width
         self.__percent = percent
         self.__orig_width = width
@@ -35,14 +42,38 @@ class GenericObjectTracker(object):
         self.__display = display
         self.__flip = flip
         self.__leds = leds
+        self.__serve_images = serve_images
         self.__stopped = False
         self.__cnt = 0
+        self.__last_write_millis = 0
+        self.__current_image_lock = Lock()
+        self.__current_image = None
 
         self._prev_x, self._prev_y = -1, -1
 
         self.__contour_finder = ContourFinder(bgr_color, hsv_range)
         self.__location_server = LocationServer(grpc_port)
         self.__cam = camera.Camera(use_picamera=not usb_camera)
+
+        if serve_images:
+            NAME = "/image.jpg"
+            flask = Flask(__name__)
+
+            @flask.route("/")
+            def index():
+                head = '<head><meta http-equiv="refresh" content=".5"></head>'
+                body = '<body><img src=".{0}"></body>'.format(NAME)
+                return '<!doctype html><html>{0}{1}</html>'.format(head, body)
+
+            @flask.route(NAME)
+            def image_jpg():
+                with self.__current_image_lock:
+                    retval, buf = utils.encode_image(self.__current_image)
+                    bytes = buf.tobytes()
+                return Response(bytes, mimetype="image/jpeg")
+
+            # Run HTTP server in a thread
+            Thread(target=flask.run, kwargs={"port": 8080}).start()
 
     @property
     def width(self):
@@ -93,12 +124,24 @@ class GenericObjectTracker(object):
         return self.__cam
 
     @property
+    def serve_images(self):
+        return self.__serve_images
+
+    @property
     def cnt(self):
         return self.__cnt
 
     @cnt.setter
     def cnt(self, val):
         self.__cnt = val
+
+    @property
+    def last_write_millis(self):
+        return self.__last_write_millis
+
+    @last_write_millis.setter
+    def last_write_millis(self, val):
+        self.__last_write_millis = val
 
     def stop(self):
         self.__stopped = True
@@ -120,6 +163,38 @@ class GenericObjectTracker(object):
                 set_pixel(i, color[2], color[1], color[0], brightness=0.05)
             show()
 
+    def display_image(self, image):
+        if self.display:
+            cv2.imshow("Image", image)
+
+            key = cv2.waitKey(1) & 0xFF
+
+            if key == 255:
+                pass
+            elif key == ord("w"):
+                self.width -= 10
+            elif key == ord("W"):
+                self.width += 10
+            elif key == ord("-") or key == ord("_") or key == 0:
+                self.percent -= 1
+            elif key == ord("+") or key == ord("=") or key == 1:
+                self.percent += 1
+            elif key == ord("r"):
+                self.width = self.__orig_width
+                self.percent = self.__orig_percent
+            elif key == ord("s"):
+                utils.write_image(image, log_info=True)
+            elif key == ord("q"):
+                self.stop()
+
+    def serve_image(self, image):
+        if self.serve_images:
+            now = currentTimeMillis()
+            if now - self.last_write_millis > 100:
+                with self.__current_image_lock:
+                    self.__current_image = image  # copy.deepcopy(image)
+                self.last_write_millis = now
+
     def start(self):
         try:
             self.location_server.start()
@@ -128,27 +203,6 @@ class GenericObjectTracker(object):
             sys.exit(1)
 
         self.location_server.write_location(-1, -1, 0, 0, 0)
-
-    def process_keystroke(self, image):
-        key = cv2.waitKey(1) & 0xFF
-
-        if key == 255:
-            pass
-        elif key == ord("w"):
-            self.width -= 10
-        elif key == ord("W"):
-            self.width += 10
-        elif key == ord("-") or key == ord("_") or key == 0:
-            self.percent -= 1
-        elif key == ord("+") or key == ord("=") or key == 1:
-            self.percent += 1
-        elif key == ord("r"):
-            self.width = self.__orig_width
-            self.percent = self.__orig_percent
-        elif key == ord("s"):
-            utils.save_image(image)
-        elif key == ord("q"):
-            self.stop()
 
     @staticmethod
     def cli_args():
@@ -161,5 +215,6 @@ class GenericObjectTracker(object):
                               cli.range,
                               cli.port,
                               cli.leds,
+                              cli.http,
                               cli.display,
                               cli.verbose)

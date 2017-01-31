@@ -28,6 +28,7 @@ class DualObjectTracker(GenericObjectTracker):
                  flip=False,
                  usb_camera=False,
                  leds=False,
+                 camera_name="",
                  serve_images=False):
         super(DualObjectTracker, self).__init__(bgr_color,
                                                 width,
@@ -39,6 +40,7 @@ class DualObjectTracker(GenericObjectTracker):
                                                 flip=flip,
                                                 usb_camera=usb_camera,
                                                 leds=leds,
+                                                camera_name=camera_name,
                                                 serve_images=serve_images)
 
     # Do not run this in a background thread. cv2.waitKey has to run in main thread
@@ -152,7 +154,9 @@ if __name__ == "__main__":
                                 display=args["display"],
                                 flip=args["flip"],
                                 usb_camera=args["usb"],
-                                leds=args["leds"] and is_raspi())
+                                leds=args["leds"] and is_raspi(),
+                                camera_name=args["camera"],
+                                serve_images=args["http"])
 
     try:
         tracker.start()

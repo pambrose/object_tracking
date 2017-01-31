@@ -33,6 +33,7 @@ class GenericObjectTracker(object):
                  flip=False,
                  usb_camera=False,
                  leds=False,
+                 camera_name="",
                  serve_images=False):
         self.__width = width
         self.__percent = percent
@@ -42,6 +43,7 @@ class GenericObjectTracker(object):
         self.__display = display
         self.__flip = flip
         self.__leds = leds
+        self.__camera_name = camera_name
         self.__serve_images = serve_images
         self.__stopped = False
         self.__cnt = 0
@@ -63,7 +65,8 @@ class GenericObjectTracker(object):
 
             def get_image_page(pause):
                 no_cache = '<meta HTTP-EQUIV="Pragma" content="no-cache">'
-                title = '<title>{0} second pause</title>'.format(pause)
+                name = self.__camera_name + " - " if self.__camera_name else ""
+                title = '<title>{0}{1} second pause</title>'.format(name, pause)
                 refresh = '<meta http-equiv="refresh" content="{0}">'.format(pause)
                 body = '<body><img src="{0}"></body>'.format(NAME)
                 return '<!doctype html><html><head>{0}{1}{2}</head>{3}</html>'.format(title, refresh, no_cache, body)
@@ -230,6 +233,7 @@ class GenericObjectTracker(object):
                               cli.range,
                               cli.port,
                               cli.leds,
+                              cli.camera_optional,
                               cli.http,
                               cli.display,
                               cli.verbose)

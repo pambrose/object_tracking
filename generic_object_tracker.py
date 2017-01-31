@@ -1,17 +1,17 @@
 import logging
 import sys
-from threading import Lock
-from threading import Thread
+from threading import Lock, Thread
 
 import camera
 import common_cli_args  as cli
 import cv2
 import opencv_utils as utils
 from common_cli_args import setup_cli_args
-from common_utils import currentTimeMillis
-from common_utils import is_raspi
+from common_utils import currentTimeMillis, is_raspi
 from contour_finder import ContourFinder
 from flask import Flask
+from flask import redirect
+from flask import request
 from werkzeug.wrappers import Response
 
 from location_server import LocationServer
@@ -57,13 +57,28 @@ class GenericObjectTracker(object):
 
         if serve_images:
             NAME = "/image.jpg"
+            PAGE = "/image"
+            PAUSE = "pause"
             flask = Flask(__name__)
 
-            @flask.route("/")
+            def get_image_page(pause):
+                no_cache = '<meta HTTP-EQUIV="Pragma" content="no-cache">'
+                title = '<title>{0} second pause</title>'.format(pause)
+                refresh = '<meta http-equiv="refresh" content="{0}">'.format(pause)
+                body = '<body><img src="{0}"></body>'.format(NAME)
+                return '<!doctype html><html><head>{0}{1}{2}</head>{3}</html>'.format(title, refresh, no_cache, body)
+
+            @flask.route('/')
             def index():
-                head = '<head><meta http-equiv="refresh" content=".5"></head>'
-                body = '<body><img src=".{0}"></body>'.format(NAME)
-                return '<!doctype html><html>{0}{1}</html>'.format(head, body)
+                return redirect(PAGE + "/0")
+
+            @flask.route(PAGE)
+            def image_query():
+                return get_image_page(request.args.get(PAUSE))
+
+            @flask.route(PAGE + "/<int:{0}>".format(PAUSE))
+            def image_path(pause):
+                return get_image_page(pause)
 
             @flask.route(NAME)
             def image_jpg():

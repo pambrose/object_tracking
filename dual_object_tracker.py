@@ -10,12 +10,8 @@ import imutils
 import opencv_defaults as defs
 from common_constants import LOGGING_ARGS
 from common_utils import is_raspi
-from opencv_utils import BLUE
-from opencv_utils import GREEN
-from opencv_utils import RED
-from opencv_utils import YELLOW
-from opencv_utils import get_list_arg
-from opencv_utils import get_moment
+from opencv_utils import BLUE, GREEN, RED
+from opencv_utils import get_list_arg, get_moment
 
 from generic_object_tracker import GenericObjectTracker
 
@@ -82,7 +78,7 @@ class DualObjectTracker(GenericObjectTracker):
                     avg_x = (abs(img_x1 - img_x2) / 2) + min(img_x1, img_x2)
                     avg_y = (abs(img_y1 - img_y2) / 2) + min(img_y1, img_y2)
 
-                    if self.display:
+                    if self.display or self.serve_images:
                         x1, y1, w1, h1 = cv2.boundingRect(countour1)
                         cv2.rectangle(image, (x1, y1), (x1 + w1, y1 + h1), BLUE, 2)
                         cv2.drawContours(image, [countour1], -1, GREEN, 2)

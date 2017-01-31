@@ -10,11 +10,8 @@ import imutils
 import opencv_defaults as defs
 from common_constants import LOGGING_ARGS
 from common_utils import is_raspi
-from opencv_utils import BLUE
-from opencv_utils import GREEN
-from opencv_utils import RED
-from opencv_utils import get_list_arg
-from opencv_utils import get_moment
+from opencv_utils import BLUE, GREEN, RED
+from opencv_utils import get_list_arg, get_moment
 
 from generic_object_tracker import GenericObjectTracker
 
@@ -74,7 +71,7 @@ class SingleObjectTracker(GenericObjectTracker):
                 if contours is not None and len(contours) == 1:
                     contour, area, img_x, img_y = get_moment(contours[0])
 
-                    if self.display:
+                    if self.display or self.serve_images:
                         x, y, w, h = cv2.boundingRect(contour)
                         cv2.rectangle(image, (x, y), (x + w, y + h), BLUE, 2)
                         cv2.drawContours(image, [contour], -1, GREEN, 2)
